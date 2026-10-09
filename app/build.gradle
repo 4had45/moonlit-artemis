@@ -1,5 +1,12 @@
 apply plugin: 'com.android.application'
 
+// Release signing key, kept out of version control in keystore.properties
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     ndkVersion "27.0.12077973"
 
@@ -11,7 +18,7 @@ android {
         minSdk 21
         targetSdk 34
 
-        versionName "20.2.6"
+        versionName "20.2.6-moonlit.1"
         versionCode = 57
 
         // Generate native debug symbols to allow Google Play to symbolicate our native crashes
@@ -93,6 +100,17 @@ android {
         }
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix ".noirdebug"
@@ -134,10 +152,13 @@ android {
             // is to please change the applicationId before you publish.
             //
             // TL;DR: Leave the following line alone!
-            applicationIdSuffix ".noir"
-            resValue "string", "app_label", "Artemis"
-            resValue "string", "app_label_root", "Artemis (Root)"
-            resValue "string", "app_label_game", "Artemis (Game)"
+            applicationIdSuffix ".moonlit"
+            resValue "string", "app_label", "Moonlit Artemis"
+            resValue "string", "app_label_root", "Moonlit Artemis (Root)"
+            resValue "string", "app_label_game", "Moonlit Artemis (Game)"
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
 
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
