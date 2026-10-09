@@ -114,9 +114,11 @@ public class PanZoomHandler {
             float newScaleFactor = scaleFactor * detector.getScaleFactor();
             newScaleFactor = Math.max(1, Math.min(newScaleFactor, MAX_SCALE)); // Apply minimum scale
 
-            // Calculate pivot point
-            float focusX = detector.getFocusX();
-            float focusY = detector.getFocusY();
+            // Calculate pivot point. Touch events come from the full-screen background view,
+            // so convert the focus into the coordinate space of the parent, which may be
+            // letterboxed rather than positioned at the origin.
+            float focusX = detector.getFocusX() - parent.getX();
+            float focusY = detector.getFocusY() - parent.getY();
 
             float dPivotX = (childX - focusX) / scaleFactor * newScaleFactor;
             float dPivotY = (childY - focusY) / scaleFactor * newScaleFactor;
@@ -154,6 +156,46 @@ public class PanZoomHandler {
             constrainToBounds();
             return true;
         }
+    }
+
+    private float pinchStartScale, pinchStartSpan;
+    private float pinchContentX, pinchContentY;
+
+    // Starts a pinch that zooms around and pans with the focus of the fingers. The focus is in
+    // the coordinate space of the full-screen background view, like the other touch events.
+    public void beginPinch(float focusX, float focusY, float span) {
+        if (parent == null) {
+            parent = (View)streamView.getParent();
+        }
+        focusX -= parent.getX();
+        focusY -= parent.getY();
+
+        childX = streamView.getX();
+        childY = streamView.getY();
+        pinchStartScale = scaleFactor;
+        pinchStartSpan = Math.max(span, 1);
+
+        // The point of the unscaled stream under the focus, which stays under the focus
+        pinchContentX = (focusX - childX) / scaleFactor;
+        pinchContentY = (focusY - childY) / scaleFactor;
+    }
+
+    public void updatePinch(float focusX, float focusY, float span) {
+        focusX -= parent.getX();
+        focusY -= parent.getY();
+        scaleFactor = Math.max(1, Math.min(pinchStartScale * span / pinchStartSpan, MAX_SCALE));
+
+        childX = focusX - pinchContentX * scaleFactor;
+        childY = focusY - pinchContentY * scaleFactor;
+
+        streamView.setScaleX(scaleFactor);
+        streamView.setScaleY(scaleFactor);
+
+        constrainToBounds();
+    }
+
+    public void endPinch() {
+        game.updatePipAutoEnter();
     }
 
     public void setInitialZoomAndPan(float scale, float offsetX, float offsetY) {

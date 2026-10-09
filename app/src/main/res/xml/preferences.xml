@@ -620,6 +620,18 @@
             app:iconSpaceReserved="false" />
 			
         <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="checkbox_pinch_to_zoom"
+            android:summary="@string/summary_pinch_to_zoom"
+            android:title="@string/title_pinch_to_zoom"
+            app:iconSpaceReserved="false" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="checkbox_show_quick_bar"
+            android:summary="@string/summary_show_quick_bar"
+            android:title="@string/title_show_quick_bar"
+            app:iconSpaceReserved="false" />
+        <CheckBoxPreference
             android:defaultValue="false"
             android:key="checkbox_show_overlay_zoom_toggle_button"
             android:summary="@string/summary_show_overlay_zoom_toggle_button"
@@ -631,6 +643,19 @@
             android:summary="@string/summary_checkbox_remember_zoom_pan"
             android:title="@string/title_checkbox_remember_zoom_pan"
             app:iconSpaceReserved="false" />
+        <com.limelight.preferences.SeekBarPreference
+            android:defaultValue="2"
+            android:dialogMessage="@string/summary_seekbar_host_monitor_count"
+            android:key="seekbar_host_monitor_count"
+            android:max="12"
+            android:summary="@string/summary_seekbar_host_monitor_count"
+            android:text=""
+            android:title="@string/title_seekbar_host_monitor_count"
+            app:iconSpaceReserved="false"
+            seekbar:divisor="1"
+            seekbar:keyStep="1"
+            seekbar:min="1"
+            seekbar:step="1" />
 
         <CheckBoxPreference
             android:defaultValue="false"

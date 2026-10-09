@@ -102,18 +102,50 @@
         android:visibility="gone"
         android:elevation="9999dp" />
 
-    <ImageButton
-        android:id="@+id/overlayToggleZoomButton"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+    <!-- Floating Quick Bar: pan/zoom, monitor switching and keyboard -->
+    <LinearLayout
+        android:id="@+id/overlayQuickBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="top|center_horizontal"
         android:layout_marginTop="24dp"
-        android:background="@drawable/floating_menu_button"
-        android:src="@drawable/ic_zoom_toggle"
-        android:padding="6dp"
-        android:scaleType="fitCenter"
-        android:contentDescription="@string/toggle_pan_zoom_mode"
+        android:orientation="horizontal"
+        android:padding="2dp"
+        android:background="@drawable/floating_quick_bar"
         android:visibility="gone"
-        android:elevation="9999dp" />
+        android:elevation="9999dp">
+
+        <ImageButton
+            android:id="@+id/overlayToggleZoomButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/floating_quick_bar_button"
+            android:src="@drawable/ic_zoom_toggle"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/toggle_pan_zoom_mode" />
+
+        <ImageButton
+            android:id="@+id/overlaySwitchMonitorButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/floating_quick_bar_button"
+            android:src="@drawable/ic_switch_monitor"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/game_menu_switch_monitor" />
+
+        <ImageButton
+            android:id="@+id/overlayToggleKeyboardButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/floating_quick_bar_button"
+            android:src="@drawable/ic_android_keyboard"
+            android:padding="7dp"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/game_menu_toggle_keyboard" />
+    </LinearLayout>
 
 </merge>

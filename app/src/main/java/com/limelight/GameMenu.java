@@ -271,6 +271,31 @@ public class GameMenu implements Game.GameMenuCallbacks {
         showMenuDialog(getString(R.string.game_menu_advanced), options.toArray(new MenuOption[options.size()]));
     }
 
+    @Override
+    public void showMonitorMenu() {
+        List<MenuOption> options = new ArrayList<>();
+
+        int monitorCount = Math.min(game.getHostMonitorCount(),
+                KeyboardTranslator.VK_F12 - KeyboardTranslator.VK_F1 + 1);
+        if (monitorCount > 1) {
+            options.add(new MenuOption(getString(R.string.game_menu_next_monitor), true,
+                    game::switchToNextMonitor));
+        }
+
+        for (int i = 0; i < monitorCount; i++) {
+            final int monitorIndex = i;
+            String label = game.getResources().getString(R.string.game_menu_monitor_n, i + 1);
+            if (i == game.getCurrentMonitorIndex()) {
+                label = "✓ " + label;
+            }
+            options.add(new MenuOption(label, true, () -> game.switchMonitor(monitorIndex)));
+        }
+
+        options.add(new MenuOption(getString(R.string.game_menu_cancel), null));
+
+        showMenuDialog(getString(R.string.game_menu_switch_monitor), options.toArray(new MenuOption[options.size()]));
+    }
+
     private void showServerCmd(ArrayList<String> serverCmds) {
         List<MenuOption> options = new ArrayList<>();
 
@@ -319,6 +344,9 @@ public class GameMenu implements Game.GameMenuCallbacks {
 
         options.add(new MenuOption(getString(game.isZoomModeEnabled() ? R.string.game_menu_disable_zoom_mode : R.string.game_menu_enable_zoom_mode), true,
                 game::toggleZoomMode));
+
+        options.add(new MenuOption(getString(R.string.game_menu_switch_monitor),
+                this::showMonitorMenu));
 
         if (dialogScreenContext == game) {
             options.add(new MenuOption(getString(R.string.game_menu_rotate_screen), true,

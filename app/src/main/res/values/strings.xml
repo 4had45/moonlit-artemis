@@ -375,6 +375,9 @@
     <string name="game_menu_enable_zoom_mode">Enable Pan/Zoom</string>
     <string name="game_menu_disable_zoom_mode">Disable Pan/Zoom</string>
     <string name="game_menu_rotate_screen">Rotate Screen</string>
+    <string name="game_menu_switch_monitor">Switch Monitor</string>
+    <string name="game_menu_next_monitor">Next Monitor</string>
+    <string name="game_menu_monitor_n">Monitor %1$d</string>
     <string name="game_menu_toggle_keyboard_model">Toggle Special keys</string>s
     <string name="game_menu_toggle_virtual_model">Toggle On-screen controller</string>
     <string name="game_menu_toggle_virtual_keyboard_model">Toggle On-screen full keyboard</string>
@@ -406,6 +409,7 @@
     <string name="toggle_pan_zoom_mode">Toggle Pan/Zoom Mode</string>
     <string name="pan_zoom_mode_enabled">Pan/Zoom Mode Enabled</string>
     <string name="pan_zoom_mode_disabled">Pan/Zoom Mode Disabled</string>
+    <string name="toast_switching_monitor">Switching to monitor %1$d</string>
 
     <string name="title_analog_scrolling">Use an analog stick to scroll</string>
     <string name="summary_analog_scrolling">Select an analog stick to scroll when in mouse emulation mode</string>
@@ -455,7 +459,11 @@
     <string name="title_checkbox_enable_perf_overlay_lite_dialog">Lite mode click to pop up quick options</string>
     <string name="summary_checkbox_enable_perf_overlay_lite_dialog">Replace the back button logic, pop up the game quick menu.</string>
     <string name="title_show_overlay_zoom_toggle_button">Show overlay zoom toggle button</string>
-    <string name="summary_show_overlay_zoom_toggle_button">Displays a draggable button at the top of the screen to toggle pan/zoom mode.</string>
+    <string name="summary_show_overlay_zoom_toggle_button">Adds a button to the floating quick bar to toggle pan/zoom mode.</string>
+    <string name="title_show_quick_bar">Show floating quick bar</string>
+    <string name="summary_show_quick_bar">Displays a draggable bar with buttons to switch monitors (long-press for the full list) and show the keyboard.</string>
+    <string name="title_pinch_to_zoom">Two-finger pinch to zoom</string>
+    <string name="summary_pinch_to_zoom">In multi-touch mode, two fingers zoom and pan the stream instead of touching the PC. To scroll, hold one finger still and drag another.</string>
     <string name="title_virtual_trackpad_settings">Virtual Trackpad Settings</string>
     <string name="title_quit_dialog">Back Menu</string>
     <string name="summary_quit_dialog">When enabled, clicking the physical back button on the streaming interface will show related options!\nSoft keyboard, performance information, touch mode switching, send special keys</string>
@@ -698,6 +706,8 @@
     <string name="summary_enable_commit_text">Forward multi-character text from soft keyboards (gesture typing, predictions, voice dictation). May break games that rely on key-by-key input.</string>
     <string name="title_checkbox_remember_zoom_pan">Remember Zoom&amp;Pan</string>
     <string name="summary_checkbox_remember_zoom_pan">Save changes to zoom and pan position between sessions</string>
+    <string name="title_seekbar_host_monitor_count">Host Monitor Count</string>
+    <string name="summary_seekbar_host_monitor_count">Number of monitors listed in the Switch Monitor menu. Monitors are numbered in the order the host enumerates them (see the Sunshine/Apollo log), which may differ from Windows display numbers.</string>
     <string name="title_checkbox_enable_perf_overlay_bottom">Move overlay to bottom</string>
     <string name="summary_checkbox_enable_perf_overlay_bottom">Useful when Display in Top Center and Lite mode are enabled during non-native resolution streaming.</string>
     <string name="title_edit_profile">Edit Profile</string>
