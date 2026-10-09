@@ -154,6 +154,41 @@ public class PanZoomHandler {
         }
     }
 
+    private float pinchStartScale, pinchStartSpan;
+    private float pinchContentX, pinchContentY;
+
+    // Starts a pinch that zooms around and pans with the focus of the fingers
+    public void beginPinch(float focusX, float focusY, float span) {
+        if (parent == null) {
+            parent = (View)streamView.getParent();
+        }
+
+        childX = streamView.getX();
+        childY = streamView.getY();
+        pinchStartScale = scaleFactor;
+        pinchStartSpan = Math.max(span, 1);
+
+        // The point of the unscaled stream under the focus, which stays under the focus
+        pinchContentX = (focusX - childX) / scaleFactor;
+        pinchContentY = (focusY - childY) / scaleFactor;
+    }
+
+    public void updatePinch(float focusX, float focusY, float span) {
+        scaleFactor = Math.max(1, Math.min(pinchStartScale * span / pinchStartSpan, MAX_SCALE));
+
+        childX = focusX - pinchContentX * scaleFactor;
+        childY = focusY - pinchContentY * scaleFactor;
+
+        streamView.setScaleX(scaleFactor);
+        streamView.setScaleY(scaleFactor);
+
+        constrainToBounds();
+    }
+
+    public void endPinch() {
+        game.updatePipAutoEnter();
+    }
+
     public void setInitialZoomAndPan(float scale, float offsetX, float offsetY) {
         this.scaleFactor = scale;
         // apply to view

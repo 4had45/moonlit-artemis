@@ -110,6 +110,8 @@ public class PreferenceConfiguration {
     private static final String CHECKBOX_ENABLE_FLOATING_BUTTON = "checkbox_enable_floating_button";
 
     private static final String CHECKBOX_SHOW_OVERLAY_ZOOM_TOGGLE_BUTTON = "checkbox_show_overlay_zoom_toggle_button";
+    private static final String CHECKBOX_SHOW_QUICK_BAR = "checkbox_show_quick_bar";
+    private static final String CHECKBOX_PINCH_TO_ZOOM = "checkbox_pinch_to_zoom";
 
     //竖屏模式
     private static final String CHECKBOX_AUTO_ORIENTATION = "checkbox_auto_orientation";
@@ -199,8 +201,12 @@ public class PreferenceConfiguration {
     private static final boolean DEFAULT_ENABLE_COMMIT_TEXT = false;
     private static final String DEFAULT_ONSCREEN_KEYBOARD_ALIGN_MODE = "center";
     private static final boolean DEFAULT_SHOW_OVERLAY_TOGGLE_BUTTON = false;
+    private static final boolean DEFAULT_SHOW_QUICK_BAR = true;
+    private static final boolean DEFAULT_PINCH_TO_ZOOM = true;
 
     private static final boolean DEFAULT_REMEMBER_ZOOM_PAN = false;
+    private static final String HOST_MONITOR_COUNT_PREF_STRING = "seekbar_host_monitor_count";
+    private static final int DEFAULT_HOST_MONITOR_COUNT = 2;
     private static final float DEFAULT_ZOOM_SCALE = 1.0f;
     private static final float DEFAULT_PAN_OFFSET = 0.0f;
 
@@ -265,6 +271,8 @@ public class PreferenceConfiguration {
     public boolean enableBackMenu;
     public boolean enableFloatingButton;
     public boolean showOverlayZoomToggleButton;
+    public boolean showQuickBar;
+    public boolean pinchToZoom;
 
     //Invert video width/height
     public boolean autoInvertVideoResolution;
@@ -356,6 +364,7 @@ public class PreferenceConfiguration {
     public boolean forceMotionSensorsFallbackToDevice;
 
     public boolean rememberZoomPan;
+    public int hostMonitorCount;
     public float zoomScale;
     public float panOffsetX;
     public float panOffsetY;
@@ -897,6 +906,8 @@ public class PreferenceConfiguration {
         config.enableBackMenu = prefs.getBoolean(CHECKBOX_ENABLE_QUIT_DIALOG,true);
         config.enableFloatingButton = prefs.getBoolean(CHECKBOX_ENABLE_FLOATING_BUTTON,DEFAULT_ENABLE_FLOATING_BUTTON);
         config.showOverlayZoomToggleButton = prefs.getBoolean(CHECKBOX_SHOW_OVERLAY_ZOOM_TOGGLE_BUTTON, DEFAULT_SHOW_OVERLAY_TOGGLE_BUTTON);
+        config.showQuickBar = prefs.getBoolean(CHECKBOX_SHOW_QUICK_BAR, DEFAULT_SHOW_QUICK_BAR);
+        config.pinchToZoom = prefs.getBoolean(CHECKBOX_PINCH_TO_ZOOM, DEFAULT_PINCH_TO_ZOOM);
         config.autoOrientation = prefs.getBoolean(CHECKBOX_AUTO_ORIENTATION,false);
         config.autoInvertVideoResolution = prefs.getBoolean(AUTO_INVERT_VIDEO_RESOLUTION_PREF_STRING, DEFAULT_AUTO_INVERT_VIDEO_RESOLUTION);
         config.resolutionScaleFactor = prefs.getInt(RESOLUTION_SCALE_FACTOR_PREF_STRING, DEFAULT_RESOLUTION_SCALE_FACTOR);
@@ -985,6 +996,7 @@ public class PreferenceConfiguration {
 //        config.customBitrate = prefs.getString(CUSTOM_BITRATE_PREF_STRING, null);
 
         config.rememberZoomPan = prefs.getBoolean(CHECKBOX_REMEMBER_ZOOM_PAN, DEFAULT_REMEMBER_ZOOM_PAN);
+        config.hostMonitorCount = prefs.getInt(HOST_MONITOR_COUNT_PREF_STRING, DEFAULT_HOST_MONITOR_COUNT);
         config.zoomScale = prefs.getFloat(NUMBER_ZOOM_SCALE, DEFAULT_ZOOM_SCALE);
         config.panOffsetX = prefs.getFloat(NUMBER_PAN_OFFSET_X, DEFAULT_PAN_OFFSET);
         config.panOffsetY = prefs.getFloat(NUMBER_PAN_OFFSET_Y, DEFAULT_PAN_OFFSET);

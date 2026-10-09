@@ -94,7 +94,9 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.View.OnGenericMotionListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
@@ -198,6 +200,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     private boolean grabbedInput = true;
     private boolean cursorVisible = false;
     private boolean isPanZoomMode = false;
+    private int currentMonitorIndex = -1;
     private boolean synthClickPending = false;
     private boolean pointerSwiping = false;
     private boolean waitingForAllModifiersUp = false;
@@ -286,6 +289,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         void showMenu(GameInputDevice devic);
         void hideMenu();
         boolean isMenuOpen();
+        void showMonitorMenu();
     }
 
     public GameMenuCallbacks gameMenuCallbacks;
@@ -294,16 +298,18 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
     public boolean allowChangeMouseMode = true;
     private boolean onExternelDisplay = false;
     private ImageButton floatingMenuButton;
+    private View overlayQuickBar;
     private ImageButton overlayToggleButton;
     private float floatingButtonDX, floatingButtonDY;
     private boolean isButtonMoving = false;
     private static final float CLICK_ACTION_THRESHOLD = 5;
     private float floatingButtonStartX, floatingButtonStartY;
 
-    // Zoom button drag state
-    private float zoomButtonDX, zoomButtonDY;
-    private boolean isZoomButtonMoving = false;
-    private float zoomButtonStartX, zoomButtonStartY;
+    // Quick bar drag state
+    private float quickBarDX, quickBarDY;
+    private boolean isQuickBarMoving = false;
+    private boolean quickBarLongPressed = false;
+    private float quickBarStartX, quickBarStartY;
 
     // Queue for batching commitText payloads
     private static final int UTF8_CHUNK_SIZE = 512;
@@ -393,6 +399,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             prefConfig.videoScaleMode = PreferenceConfiguration.ScaleMode.STRETCH;
             prefConfig.enableFloatingButton = false;
             prefConfig.showOverlayZoomToggleButton = false;
+            prefConfig.showQuickBar = false;
             prefConfig.enablePip = false;
             currentOrientation = Configuration.ORIENTATION_LANDSCAPE;
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
@@ -810,79 +817,99 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         updateFloatingButtonVisibility(prefConfig.enableBackMenu && prefConfig.enableFloatingButton);
         initFloatingButton();
 
+        overlayQuickBar = findViewById(R.id.overlayQuickBar);
         overlayToggleButton = findViewById(R.id.overlayToggleZoomButton);
-        setupOverlayToggleButton();
+        setupOverlayQuickBar();
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    private void setupOverlayToggleButton() {
-        if (overlayToggleButton != null) {
-            if (prefConfig.showOverlayZoomToggleButton) {
-                overlayToggleButton.setVisibility(View.VISIBLE);
-
-                // Set initial appearance based on current state
-                updateZoomButtonAppearance();
-
-                // Touch listener for drag and click
-                overlayToggleButton.setOnTouchListener((view, event) -> {
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            zoomButtonStartX = event.getRawX();
-                            zoomButtonStartY = event.getRawY();
-                            zoomButtonDX = view.getX() - event.getRawX();
-                            zoomButtonDY = view.getY() - event.getRawY();
-                            isZoomButtonMoving = false;
-                            return true;
-                        case MotionEvent.ACTION_MOVE:
-                            float newX = event.getRawX() + zoomButtonDX;
-                            float newY = event.getRawY() + zoomButtonDY;
-
-                            // Check if it's a move or just a tap
-                            if (Math.abs(event.getRawX() - zoomButtonStartX) > CLICK_ACTION_THRESHOLD ||
-                                    Math.abs(event.getRawY() - zoomButtonStartY) > CLICK_ACTION_THRESHOLD) {
-                                isZoomButtonMoving = true;
-                            }
-
-                            // Ensure the button stays within screen bounds
-                            if (newX < 0) newX = 0;
-                            if (newY < 0) newY = 0;
-
-                            int maxOffsetX = getWindow().getDecorView().getWidth() - view.getWidth();
-                            if (newX > maxOffsetX) {
-                                newX = maxOffsetX;
-                            }
-
-                            int maxOffsetY = getWindow().getDecorView().getHeight() - view.getHeight();
-                            if (newY > maxOffsetY) {
-                                newY = maxOffsetY;
-                            }
-
-                            view.setX(newX);
-                            view.setY(newY);
-                            return true;
-                        case MotionEvent.ACTION_UP:
-                            if (!isZoomButtonMoving) {
-                                // It's a click event, toggle zoom mode
-                                toggleZoomMode();
-                                updateZoomButtonAppearance();
-                            }
-                            isZoomButtonMoving = false;
-                            return true;
-                        default:
-                            return false;
-                    }
-                });
-            } else {
-                overlayToggleButton.setVisibility(View.GONE);
-            }
+    private void setupOverlayQuickBar() {
+        if (overlayQuickBar == null) {
+            return;
         }
+
+        if (!prefConfig.showQuickBar) {
+            overlayQuickBar.setVisibility(View.GONE);
+            return;
+        }
+
+        overlayQuickBar.setVisibility(View.VISIBLE);
+        overlayToggleButton.setVisibility(prefConfig.showOverlayZoomToggleButton ? View.VISIBLE : View.GONE);
+
+        // Set initial appearance based on current state
+        updateZoomButtonAppearance();
+
+        setupQuickBarButton(overlayToggleButton, this::toggleZoomMode, null);
+        setupQuickBarButton(findViewById(R.id.overlaySwitchMonitorButton),
+                this::switchToNextMonitor,
+                () -> gameMenuCallbacks.showMonitorMenu());
+        setupQuickBarButton(findViewById(R.id.overlayToggleKeyboardButton), this::toggleKeyboard, null);
+    }
+
+    // Dragging any button of the quick bar moves the whole bar, while a tap or
+    // long press runs the button's action
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupQuickBarButton(View button, Runnable onTap, Runnable onLongPress) {
+        Runnable longPressRunnable = () -> {
+            if (!isQuickBarMoving && onLongPress != null) {
+                quickBarLongPressed = true;
+                button.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                onLongPress.run();
+            }
+        };
+
+        button.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    quickBarStartX = event.getRawX();
+                    quickBarStartY = event.getRawY();
+                    quickBarDX = overlayQuickBar.getX() - event.getRawX();
+                    quickBarDY = overlayQuickBar.getY() - event.getRawY();
+                    isQuickBarMoving = false;
+                    quickBarLongPressed = false;
+                    view.setPressed(true);
+                    view.postDelayed(longPressRunnable, ViewConfiguration.getLongPressTimeout());
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    // Check if it's a move or just a tap
+                    if (Math.abs(event.getRawX() - quickBarStartX) > CLICK_ACTION_THRESHOLD ||
+                            Math.abs(event.getRawY() - quickBarStartY) > CLICK_ACTION_THRESHOLD) {
+                        isQuickBarMoving = true;
+                        view.setPressed(false);
+                        view.removeCallbacks(longPressRunnable);
+                    }
+
+                    if (isQuickBarMoving && !quickBarLongPressed) {
+                        // Ensure the bar stays within screen bounds
+                        float maxX = getWindow().getDecorView().getWidth() - overlayQuickBar.getWidth();
+                        float maxY = getWindow().getDecorView().getHeight() - overlayQuickBar.getHeight();
+                        overlayQuickBar.setX(Math.max(0, Math.min(event.getRawX() + quickBarDX, maxX)));
+                        overlayQuickBar.setY(Math.max(0, Math.min(event.getRawY() + quickBarDY, maxY)));
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    view.setPressed(false);
+                    view.removeCallbacks(longPressRunnable);
+                    if (!isQuickBarMoving && !quickBarLongPressed) {
+                        onTap.run();
+                    }
+                    isQuickBarMoving = false;
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    view.setPressed(false);
+                    view.removeCallbacks(longPressRunnable);
+                    isQuickBarMoving = false;
+                    return true;
+                default:
+                    return false;
+            }
+        });
     }
 
     private void updateZoomButtonAppearance() {
         if (overlayToggleButton != null) {
             // Change background based on pan/zoom mode state
             overlayToggleButton.setBackgroundResource(isPanZoomMode ?
-                R.drawable.floating_menu_button_active : R.drawable.floating_menu_button);
+                R.drawable.floating_menu_button_active : R.drawable.floating_quick_bar_button);
             // No need for alpha changes since the color indicates the state
             overlayToggleButton.setAlpha(1.0f);
         }
@@ -1095,10 +1122,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                     floatingMenuButton.setVisibility(View.GONE);
                 }
 
-                overlayToggleZoomButtonShown = overlayToggleButton != null && overlayToggleButton.isShown();
+                overlayToggleZoomButtonShown = overlayQuickBar != null && overlayQuickBar.isShown();
 
                 if (overlayToggleZoomButtonShown) {
-                    overlayToggleButton.setVisibility(View.GONE);
+                    overlayQuickBar.setVisibility(View.GONE);
                 }
 
                 if (virtualController != null) {
@@ -1132,7 +1159,7 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 }
 
                 if (overlayToggleZoomButtonShown) {
-                    overlayToggleButton.setVisibility(View.VISIBLE);
+                    overlayQuickBar.setVisibility(View.VISIBLE);
                 }
 
                 // Restore overlays to previous state when leaving PiP
@@ -2501,6 +2528,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         // the orientation), so rotate the orientation angle by 90 degrees.
         float[] contactAreaMinorCartesian = polarToCartesian(contactAreaMinor, (float)(orientation + (Math.PI / 2)));
 
+        // Undo the pan/zoom scaling, since a finger covers less of the video when zoomed in
+        contactAreaMajorCartesian[0] /= streamView.getScaleX();
+        contactAreaMinorCartesian[0] /= streamView.getScaleX();
+        contactAreaMajorCartesian[1] /= streamView.getScaleY();
+        contactAreaMinorCartesian[1] /= streamView.getScaleY();
+
         // Normalize the contact area to the stream view size
         contactAreaMajorCartesian[0] = Math.min(Math.abs(contactAreaMajorCartesian[0]), streamView.getWidth()) / streamView.getWidth();
         contactAreaMinorCartesian[0] = Math.min(Math.abs(contactAreaMinorCartesian[0]), streamView.getWidth()) / streamView.getWidth();
@@ -2977,6 +3010,12 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                         }
                     }
 
+                    if (prefConfig.enableMultiTouchScreen && !prefConfig.touchscreenTrackpad &&
+                            prefConfig.pinchToZoom && handleTwoFingerGesture(event)) {
+                        // Two fingers zoom the stream locally or scroll instead of touching the host
+                        return true;
+                    }
+
                     if (prefConfig.enableMultiTouchScreen && !prefConfig.touchscreenTrackpad && trySendTouchEvent(view, event)) {
                         // If this host supports touch events and absolute touch is enabled,
                         // send it directly as a touch event.
@@ -3134,6 +3173,142 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         return true;
     }
 
+    // Two-finger gestures in multi-touch mode. The first finger is sent to the host as usual, but
+    // once a second finger lands we take over the gesture: if the first finger was held still,
+    // the second finger scrolls, otherwise both fingers pinch to zoom and pan the stream locally.
+    private static final int TWO_FINGER_SCROLL_HOLD_TIME = 300;
+    private static final int TWO_FINGER_SCROLL_SPEED_FACTOR = 3;
+
+    private enum TwoFingerMode { NONE, PINCH, SCROLL }
+    private TwoFingerMode twoFingerMode = TwoFingerMode.NONE;
+    private long firstFingerDownTime;
+    private float firstFingerDownX, firstFingerDownY;
+    private boolean firstFingerMoved;
+    private int scrollPointerId;
+    private float scrollLastX, scrollLastY;
+
+    private boolean handleTwoFingerGesture(MotionEvent event) {
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                twoFingerMode = TwoFingerMode.NONE;
+                firstFingerDownTime = event.getEventTime();
+                firstFingerDownX = event.getX();
+                firstFingerDownY = event.getY();
+                firstFingerMoved = false;
+                return false;
+
+            case MotionEvent.ACTION_POINTER_DOWN:
+                if (twoFingerMode != TwoFingerMode.NONE) {
+                    // Extra fingers are ignored once a gesture is in progress
+                    return true;
+                }
+                if (event.getPointerCount() != 2) {
+                    return false;
+                }
+
+                // Withdraw the first finger's touch from the host
+                conn.sendTouchEvent(MoonBridge.LI_TOUCH_EVENT_CANCEL_ALL, 0,
+                        0, 0, 0, 0, 0,
+                        MoonBridge.LI_ROT_UNKNOWN);
+
+                if (!firstFingerMoved && event.getEventTime() - firstFingerDownTime >= TWO_FINGER_SCROLL_HOLD_TIME) {
+                    twoFingerMode = TwoFingerMode.SCROLL;
+                    int actionIndex = event.getActionIndex();
+                    scrollPointerId = event.getPointerId(actionIndex);
+                    scrollLastX = event.getX(actionIndex);
+                    scrollLastY = event.getY(actionIndex);
+
+                    // Scroll the window under the held finger
+                    float[] coords = getNormalizedCoordinates(streamView, firstFingerDownX, firstFingerDownY);
+                    float x = Math.min(Math.max(coords[0], 0), streamView.getWidth());
+                    float y = Math.min(Math.max(coords[1], 0), streamView.getHeight());
+                    conn.sendMousePosition((short) x, (short) y, (short) streamView.getWidth(), (short) streamView.getHeight());
+                }
+                else {
+                    twoFingerMode = TwoFingerMode.PINCH;
+                    float[] focusAndSpan = getFocusAndSpan(event, -1);
+                    panZoomHandler.beginPinch(focusAndSpan[0], focusAndSpan[1], focusAndSpan[2]);
+                }
+                return true;
+
+            case MotionEvent.ACTION_MOVE:
+                if (twoFingerMode == TwoFingerMode.NONE) {
+                    if (!firstFingerMoved && Math.hypot(event.getX() - firstFingerDownX, event.getY() - firstFingerDownY) >
+                            ViewConfiguration.get(this).getScaledTouchSlop()) {
+                        firstFingerMoved = true;
+                    }
+                    return false;
+                }
+                else if (twoFingerMode == TwoFingerMode.PINCH) {
+                    if (event.getPointerCount() >= 2) {
+                        float[] focusAndSpan = getFocusAndSpan(event, -1);
+                        panZoomHandler.updatePinch(focusAndSpan[0], focusAndSpan[1], focusAndSpan[2]);
+                    }
+                }
+                else {
+                    int pointerIndex = event.findPointerIndex(scrollPointerId);
+                    if (pointerIndex >= 0) {
+                        int deltaX = (int) (event.getX(pointerIndex) - scrollLastX);
+                        int deltaY = (int) (event.getY(pointerIndex) - scrollLastY);
+
+                        // Natural scrolling: content follows the finger
+                        if (deltaY != 0) {
+                            conn.sendMouseHighResScroll((short) (deltaY * TWO_FINGER_SCROLL_SPEED_FACTOR));
+                            scrollLastY += deltaY;
+                        }
+                        if (deltaX != 0) {
+                            conn.sendMouseHighResHScroll((short) (-deltaX * TWO_FINGER_SCROLL_SPEED_FACTOR));
+                            scrollLastX += deltaX;
+                        }
+                    }
+                }
+                return true;
+
+            case MotionEvent.ACTION_POINTER_UP:
+                if (twoFingerMode == TwoFingerMode.PINCH && event.getPointerCount() > 2) {
+                    // Continue pinching with the remaining fingers
+                    float[] focusAndSpan = getFocusAndSpan(event, event.getActionIndex());
+                    panZoomHandler.beginPinch(focusAndSpan[0], focusAndSpan[1], focusAndSpan[2]);
+                }
+                // Remaining fingers stay with the gesture until all are lifted
+                return twoFingerMode != TwoFingerMode.NONE;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                boolean consumed = twoFingerMode != TwoFingerMode.NONE;
+                if (twoFingerMode == TwoFingerMode.PINCH) {
+                    panZoomHandler.endPinch();
+                }
+                twoFingerMode = TwoFingerMode.NONE;
+                return consumed;
+
+            default:
+                return twoFingerMode != TwoFingerMode.NONE;
+        }
+    }
+
+    // Returns the focus point and span of the pointers in an event, like ScaleGestureDetector,
+    // optionally skipping a pointer that is being lifted
+    private static float[] getFocusAndSpan(MotionEvent event, int skipIndex) {
+        int count = 0;
+        float sumX = 0, sumY = 0;
+        for (int i = 0; i < event.getPointerCount(); i++) {
+            if (i == skipIndex) continue;
+            sumX += event.getX(i);
+            sumY += event.getY(i);
+            count++;
+        }
+        float focusX = sumX / count;
+        float focusY = sumY / count;
+
+        float devSum = 0;
+        for (int i = 0; i < event.getPointerCount(); i++) {
+            if (i == skipIndex) continue;
+            devSum += (float) Math.hypot(event.getX(i) - focusX, event.getY(i) - focusY);
+        }
+        return new float[] { focusX, focusY, devSum / count * 2 };
+    }
+
     private boolean handleMultiTouchGesture(MotionEvent event, int eventAction, int pointerCount, View view) {
 
         if (eventAction == MotionEvent.ACTION_POINTER_DOWN) {
@@ -3255,9 +3430,10 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
             eventY = event.getY(0);
         } else {
             // For the containing background view, we must subtract the origin
-            // of the StreamView to get video-relative coordinates.
-            eventX = event.getX(0) - streamView.getX();
-            eventY = event.getY(0) - streamView.getY();
+            // of the StreamView and undo its pan/zoom scaling to get video-relative coordinates.
+            float[] normalized = getNormalizedCoordinates(streamView, event.getX(0), event.getY(0));
+            eventX = normalized[0];
+            eventY = normalized[1];
         }
 
         if (event.getPointerCount() == 1 && event.getActionIndex() == 0 &&
@@ -3587,8 +3763,8 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
                 // Sync local clipboard to host
                 handleFocusChange(true);
 
-                // Ensure overlay toggle button visibility is properly set
-                setupOverlayToggleButton();
+                // Ensure overlay quick bar visibility is properly set
+                setupOverlayQuickBar();
 
                 hideSystemUi(1000);
             }
@@ -3901,6 +4077,38 @@ public class Game extends AppCompatActivity implements SurfaceHolder.Callback,
         if (ExternalDisplayControlActivity.instance != null) {
             ExternalDisplayControlActivity.instance.toggleZoomMode(false);
         }
+    }
+
+    public int getHostMonitorCount() {
+        return prefConfig.hostMonitorCount;
+    }
+
+    // Index of the host monitor last selected from this client, or -1 if not switched yet
+    public int getCurrentMonitorIndex() {
+        return currentMonitorIndex;
+    }
+
+    // Sunshine/Apollo switch the captured display on Ctrl+Alt+Shift+F1 to F12, where F1 selects
+    // the first display in the host's enumeration order (as listed in its logs).
+    public void switchMonitor(int monitorIndex) {
+        if (monitorIndex < 0 || monitorIndex > KeyboardTranslator.VK_F12 - KeyboardTranslator.VK_F1) {
+            return;
+        }
+
+        currentMonitorIndex = monitorIndex;
+        sendKeys(new short[]{
+                KeyboardTranslator.VK_LCONTROL,
+                KeyboardTranslator.VK_LMENU,
+                KeyboardTranslator.VK_LSHIFT,
+                (short) (KeyboardTranslator.VK_F1 + monitorIndex)
+        });
+        Toast.makeText(this, getString(R.string.toast_switching_monitor, monitorIndex + 1), Toast.LENGTH_SHORT).show();
+    }
+
+    public void switchToNextMonitor() {
+        // The host usually starts on the first monitor if we haven't switched yet
+        int current = Math.max(currentMonitorIndex, 0);
+        switchMonitor((current + 1) % Math.max(1, getHostMonitorCount()));
     }
 
     public void rotateScreen() {
