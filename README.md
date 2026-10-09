@@ -1,3 +1,23 @@
+# Moonlit Artemis
+
+A fork of [Artemis Android](https://github.com/ClassicOldSong/moonlight-android) (based on v20.2.6) that makes desktop use on a phone easier. It installs alongside official Artemis as a separate app.
+
+**[Download the latest APK](https://github.com/4had45/moonlit-artemis/releases/latest)**
+
+## What's different
+
+- **Pinch to zoom, always on** (multi-touch mode): two fingers zoom and pan the stream on the phone. No need to switch into pan/zoom mode first.
+- **Hold-and-drag scrolling**: hold one finger still, then drag another finger to scroll the window under the held finger.
+- **Accurate taps while zoomed**: fixes taps and clicks landing in the wrong place on the PC when the stream is zoomed in.
+- **Floating quick bar**: a draggable bar with buttons to switch monitors (tap for next, long-press for the list) and show the keyboard.
+- **Switch Monitor menu**: pick which host monitor to stream, using the Sunshine/Apollo `Ctrl+Alt+Shift+F1-F12` shortcuts. Set how many monitors you have in Settings (Host Monitor Count).
+
+Settings to turn these on or off: *Two-finger pinch to zoom*, *Show floating quick bar*, *Show overlay zoom toggle button*, *Host Monitor Count*.
+
+These changes have also been proposed upstream to Artemis.
+
+---
+
 # Artemis Android
 
 Previously named Moonlight Noir
